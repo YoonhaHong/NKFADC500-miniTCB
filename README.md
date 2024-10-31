@@ -13,7 +13,8 @@ DAQ code for NOTICE KOREA FADC500 with miniTCB
 ## Draw figures
 
 `root -l 'Waveform_overlap.cpp( RUNNUMBER_TO_DRAW )`
-![Draw This](fig/Waveform_20001.png)
+- This code draw this:
+![Waveform example](fig/Waveform_20001.png)
 
 `root -l 'Draw.cpp( RUNNUMBER_TO_DRAW )` : Visualize the data from the given RUNNUMBER as an argument
 - **WAVEFORM + PEDSTAL + ADC PEAK**	
