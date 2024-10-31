@@ -15,8 +15,8 @@ using namespace std;
 
 const int CoinCut1[2] = { -5, 5 };// -10<dt<10ns
 const int CoinCut2[2] = { -1, 1 };// -2<dt<2ns
-const int ADCMax = 2000;
-const int ADCAxisMax = 200;
+const int ADCAxisMax = 100;
+const int DTAxisMax = 30;
 
 void Draw_YH(const int RunNo=20000, const char* inPath = "./data", const char* Suffix = "", bool Print = false)
 {
@@ -94,7 +94,8 @@ void Draw_YH(const int RunNo=20000, const char* inPath = "./data", const char* S
  	TH1F* H1_dtCoin1 = new TH1F( "H1_dtCoin1", "", 2*nADC,-nADC,nADC);
     TH1F* H1_dtCoin2 = new TH1F( "H1_dtCoin2", "", 2*nADC,-nADC,nADC);
 
-    TH2F* H2_PeakAmp = new TH2F( "H2_PeakAmp_ch1ch2", "CH1 vs CH2", 110, 0, 110, 110, 0, 110 );
+    TH2F* H2_PeakAmp = new TH2F( "H2_PeakAmp_ch1ch2", "CH1 vs CH2", ADCAxisMax, 0, ADCAxisMax
+                                                                  , ADCAxisMax, 0, ADCAxisMax);
 	TH1F* H1_PeakAmpCoin1[nCh];
 	TH1F* H1_PeakAmpCoin2[nCh];
 	TH2F* H2_PeakTimeAmp[nCh];
@@ -107,18 +108,18 @@ void Draw_YH(const int RunNo=20000, const char* inPath = "./data", const char* S
 
         H1_Pedestal[Ch] = new TH1F( Form("H1_Pedestal%i", Ch+1), Form("H1_Pedestal%i", Ch+1), 200, 300, 500 );
         H1_Pulse[Ch] = new TH1F( Form("Pulse_ch%i", Ch+1), "", nADC, 0, nADC);
-        H1_PeakAmp[Ch] = new TH1F( Form("PeakAmp_ch%i", Ch+1), "", ADCMax+10, -10, ADCMax);
-        H1_PeakCut[Ch] = new TH1F( Form("PeakCut_ch%i", Ch+1), "", ADCMax+10, -10, ADCMax);
+        H1_PeakAmp[Ch] = new TH1F( Form("PeakAmp_ch%i", Ch+1), "", 4000+10, -10, 4000);
+        H1_PeakCut[Ch] = new TH1F( Form("PeakCut_ch%i", Ch+1), "", 4000+10, -10, 4000);
 
 
-        H1_PeakAmpCoin1[Ch] = new TH1F( Form("PeakAmpCoin1_ch%i", Ch+1), "", ADCMax+10, -10, ADCMax);
-        H1_PeakAmpCoin2[Ch] = new TH1F( Form("PeakAmpCoin2_ch%i", Ch+1), "", ADCMax+10, -10, ADCMax);
-        H2_PeakTimeAmp[Ch] = new TH2F( Form("PeakTimeAmp_ch%i", Ch+1), Form("CH%i time vs ADC_{peak}", Ch+1), nADC, 0, nADC, ADCMax+10, -10, ADCMax);
+        H1_PeakAmpCoin1[Ch] = new TH1F( Form("PeakAmpCoin1_ch%i", Ch+1), "", 4000+10, -10, 4000);
+        H1_PeakAmpCoin2[Ch] = new TH1F( Form("PeakAmpCoin2_ch%i", Ch+1), "", 4000+10, -10, 4000);
+        H2_PeakTimeAmp[Ch] = new TH2F( Form("PeakTimeAmp_ch%i", Ch+1), Form("CH%i time vs ADC_{peak}", Ch+1), nADC, 0, nADC, 4000+10, -10, 4000);
 
 		Rate[Ch] = new TGraph();
 	}
     
-	//-------------------------------------------
+	//------------------------------------------
 	//Read the FADC data and fill H2
 	
 	T -> GetEntry(0);
@@ -133,25 +134,20 @@ void Draw_YH(const int RunNo=20000, const char* inPath = "./data", const char* S
 		
 		for (int iCh=0; iCh<nCh; iCh++)
 		{
+            std::vector<short> vecPed;
+            vecPed.resize(0);
 			for (int c=0; c<nADC; c++)
 			{
 				H2[iCh]->SetBinContent( iEv+1, c+1, fADC[iCh][c]);
+                if(1<=c and c<=20){
+                    vecPed.push_back( fADC[iCh][c] );
+                }
 			}//c, # of sampling per event
 
 
             TH1F* htemp = (TH1F*) H2[iCh] -> ProjectionY("", iEv+1, iEv+1);
-			//if( iEv ==2 and iCh==0 ) htemp -> Draw();
-
-            TF1* fit_ped1 = new TF1("fit_ped1","pol0",0,20);
-            TF1* fit_ped2 = new TF1("fit_ped2","pol0",200,240);
-
-            htemp -> Fit(fit_ped1,"R0LQ");
-            htemp -> Fit(fit_ped2,"R0LQ");
-            
-            float Pedestal = fit_ped1 -> GetParameter(0);
-            //float Pedestal2 = fit_ped2 -> GetParameter(0);
-            //float Pedestal  = (Pedestal1 + Pedestal2) / 2.f ; 
-
+            float sum = accumulate(vecPed.begin(), vecPed.end(), 0);
+            float Pedestal = sum / (float)vecPed.size() ;
             H1_Pedestal[iCh] -> Fill( Pedestal );
 
             for(int x=0; x<htemp -> GetNbinsX(); x++)
@@ -193,7 +189,7 @@ void Draw_YH(const int RunNo=20000, const char* inPath = "./data", const char* S
 
 	}//iEv
 
-	TCanvas* c1 = new TCanvas("c1","c1",1.2*600*4,600*5);
+	TCanvas* c1 = new TCanvas("c1","c1",600*4,600*5);
 	c1 -> Divide(4,5);
 	TPad* PeakPad[4];
 	TH1* PeakFrame[4];
@@ -297,7 +293,7 @@ void Draw_YH(const int RunNo=20000, const char* inPath = "./data", const char* S
 	dtPad -> SetLogy();
 
 	int dtMax = H1_dt -> GetMaximum(); 
-	TH1* dtFrame = dtPad -> DrawFrame( -nADC, 0.5, nADC, dtMax * 1.3 );
+	TH1* dtFrame = dtPad -> DrawFrame( -DTAxisMax, 0.5, DTAxisMax, dtMax * 1.3 );
 	dtFrame -> GetXaxis() -> SetLabelSize(0.05);
 	dtFrame -> GetYaxis() -> SetLabelSize(0.05);
 	dtFrame -> GetXaxis() -> SetTitleSize(0.05);
