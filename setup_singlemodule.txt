@@ -1,0 +1,5 @@
+2
+30 30 50 50
+------------------------------
+1. Trigger: &,|,1,2 are usable options 
+2. ADC Threshold: 1 ADC ~ 0.6 mV	ex) 15 ADC = 9 mV
