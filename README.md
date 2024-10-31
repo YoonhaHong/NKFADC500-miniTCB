@@ -21,6 +21,7 @@ DAQ code for NOTICE KOREA FADC500 with miniTCB
 - Get ADC(waveform), triggered time, etc from `./data/FADCData_RUNNO.root`
 - Get Threshold, TRGLogic from `./data/log_RUNNO.txt`
 - Figure is saved at `./fig/RUNNUMBER_TO_DRAW.pdf`
+- example here: ![Draw example](fig/20001.pdf)
 
 
 
