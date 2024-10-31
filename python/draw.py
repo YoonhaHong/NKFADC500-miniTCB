@@ -143,7 +143,7 @@ if __name__ == "__main__":
         PeakPad[b].SetLogy()
         
         for c in range(2):
-            c1.cd(b + 3 * c + 1)
+            1.cd(b + 3 * c + 1)
             if c == 0:
                 PeakPad[b].Draw()
                 PeakPad[b].cd()
