@@ -13,6 +13,21 @@
 #include <vector>
 using namespace std;
 
+int GetDataLength(const char* inFile)
+{
+	//Reading 1st event, 1st header (32 bytes fixed), 1st channel's very first four bits will be enough
+	ifstream in;
+	in.open(inFile, std::ios::binary);
+	if (!in.is_open()) { cout <<"GetDataLength - cannot open the file! Stop.\n"; return 1; }
+
+	char data[32];
+	in.read(data, 32);
+	unsigned long dataLength = 0;
+	for (int i=0; i<4; i++) dataLength += ((ULong_t)(data[4*i] & 0xFF) << 8*i);
+
+	in.close();
+	return (int)dataLength;
+}//GetDataLength
 
 void Waveform_overlap(const int RunNo=20001, const char* inPath = "./data")
 {
@@ -22,7 +37,6 @@ void Waveform_overlap(const int RunNo=20001, const char* inPath = "./data")
     int ADCMIN = 300;
 
     const int nCh = 4;
-    const int DLen = 512;
 
 	TFile* F  = new TFile(Form("%s/FADCData_%i.root", inPath, RunNo));
 	TTree* T = (TTree*)F->Get("T");
@@ -30,7 +44,7 @@ void Waveform_overlap(const int RunNo=20001, const char* inPath = "./data")
  	const int nEvents = T->GetEntries();
 	cout << "Number of events: " << nEvents << endl;
 	
-
+    const int DLen = GetDataLength(Form("%s/FADCData_%i_1.dat", inPath,RunNo));  
 	const int nADC = (DLen-32)/2;
 	const int nTDC = nADC/4;
 
@@ -61,9 +75,9 @@ void Waveform_overlap(const int RunNo=20001, const char* inPath = "./data")
 
 	}//iEv
 
-	TCanvas* c1 = new TCanvas("c1","c1",600*2,600);
-	c1 -> Divide(2, 1, 0.02, 0.02);
-    for(int Ch=0; Ch<2; Ch++){
+	TCanvas* c1 = new TCanvas("c1","c1",600*4,600);
+	c1 -> Divide(4, 1, 0.02, 0.02);
+    for(int Ch=0; Ch<4; Ch++){
         c1 -> cd(Ch+1);
         gPad -> SetLogz();
         gPad -> SetRightMargin(0.13);

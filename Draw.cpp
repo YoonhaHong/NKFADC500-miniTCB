@@ -18,6 +18,23 @@ const int CoinCut2[2] = { -1, 1 };// -2<dt<2ns
 const int ADCAxisMax = 100;
 const int DTAxisMax = 30;
 
+int GetDataLength(const char* inFile)
+{
+	//Reading 1st event, 1st header (32 bytes fixed), 1st channel's very first four bits will be enough
+	ifstream in;
+	in.open(inFile, std::ios::binary);
+	if (!in.is_open()) { cout <<"GetDataLength - cannot open the file! Stop.\n"; return 1; }
+
+	char data[32];
+	in.read(data, 32);
+	unsigned long dataLength = 0;
+	for (int i=0; i<4; i++) dataLength += ((ULong_t)(data[4*i] & 0xFF) << 8*i);
+
+	in.close();
+	return (int)dataLength;
+}//GetDataLength
+
+
 void Draw(const int RunNo=20001, const char* inPath = "./data", const char* Suffix = "", bool Print = false)
 {
     gStyle->SetOptStat(0);
@@ -27,7 +44,6 @@ void Draw(const int RunNo=20001, const char* inPath = "./data", const char* Suff
     gStyle->SetTitleOffset(0.8);           
 	const int nCh  = 4;
 	vector<int> TrigTh = {25, 25, 50, 50};
-	const int DLen = 512;
 
 	//for parsing
 	ifstream logFile( Form( "%s/log_%d.txt",inPath, RunNo ) );
@@ -63,7 +79,7 @@ void Draw(const int RunNo=20001, const char* inPath = "./data", const char* Suff
  	const int nEvents = T->GetEntries();
 	cout << "Number of events: " << nEvents << endl;
 	
-
+    const int DLen = GetDataLength(Form("%s/FADCData_%i_1.dat", inPath,RunNo));  
 	const int nADC = (DLen-32)/2;
 	const int nTDC = nADC/4;
 

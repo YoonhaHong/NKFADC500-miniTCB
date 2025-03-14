@@ -1,5 +1,13 @@
-2
-30 30 50 50
-------------------------------
-1. Trigger: &,|,1,2 are usable options 
-2. ADC Threshold: 1 ADC ~ 0.6 mV	ex) 15 ADC = 9 mV
+256
+0x8888
+150 150 50 50
+100 100 150 150
+0 0 1 1
+3500 3500 500 500
+-----------------------------------------------
+row1 = Recording length(1=128 ns / 2=256 / 4=512 / ... / 256=32 us)
+row2 = Trigger lookup table(CH1: AAAA / CH2: CCCC / 1|2: EEEE / 1&2: 8888)
+row3 = Discrimination threshold(1 mV ~ 0.6 ADC)
+row4 = ADC waveform delay from trigger point(0 ~ 31992)
+row5 = Input pulse polarity(0 = negative, 1 = positive)
+row6 = ADC offset value: 0 ~ 4095

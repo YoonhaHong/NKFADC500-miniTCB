@@ -24,10 +24,10 @@ int main(int argc, char** argv)
 	unsigned long tPSCALE = 1;      // Trigger input prescaler @ MINITCB_V2
 	unsigned long tPTRIG  = 1;      // Pedestal trigger interval in ms, 0 for disable
 
-	unsigned long tTrigOn_self = 1; // D0: when 1 enables self trigger
+	unsigned long tTrigOn_self = 0; // D0: when 1 enables self trigger
 	unsigned long tTrigOn_ped  = 0; // D1: when 1 enables pedestal trigger
 	unsigned long tTrigOn_soft = 0; // D2: when 1 enables software trigger
-	unsigned long tTrigOn_ext  = 0; // D3: when 1 enables external trigger
+	unsigned long tTrigOn_ext  = 1; // D3: when 1 enables external trigger
 	unsigned long tTrigOn = (tTrigOn_ext<<3) | (tTrigOn_soft<<2) | (tTrigOn_ped<<1) | tTrigOn_self;
 
 	// NKFADC500 setting: every timing setting unit is ns
@@ -37,24 +37,44 @@ int main(int argc, char** argv)
 //	const int nMID = 2; //# of available FADC modules
 	const int nCh  = 4; //# of channels per FADC module
 
+	FILE* fp = fopen("setup_singlemodule.txt" ,"rt");
+
+    unsigned long fRL = 4;
+    fscanf(fp, "%lu", &fRL);
 	// Recording length 
 	// ns scale: 1=128, 2=256, and 4=512
 	// us scale: 8=1, 16=2, 32=4, 64=8, 128=16, and 256=32
-	unsigned long fRL = 4;
 
+	unsigned long fTLT[nMID] = {0x8888};
+   	fscanf(fp, "%lx", fTLT);
 	// Trigger lookup table value, any: FFFE, 1&3&2&4: 8000, 1&2|3&4: F888, 1&3|2&4: ECA0
 	// 1 must be fired: AAAA
 	// 2 must be fired: CCCC
 	// 1|2: EEEE
 	// 1&2: 8888
 	// 3&4: F000
-	unsigned long fTLT[nMID] = {0x8888};
-	//unsigned long fTLT[nMID] = {0xCCCC};
-//	unsigned long fTLT[nMID] = {0xAAAA};
-//	unsigned long fTLT[nMID] = {0xEEEE, 0xAAAA};
+
+	unsigned long fTHR[nMID][nCh] = {{100, 100, 100, 100}};
+	for(int i=0; i<nMID; i++) fscanf(fp, "%lu %lu %lu %lu", fTHR[i]+0, fTHR[i]+1, fTHR[i]+2, fTHR[i]+3);
+	// Discrimination thresholu
+	    // 1 ~ 4095 for pulse height thresholu: 4,095 vs. 2 V (dynamic range) -> 100 ~ 50 mV 
+        // mV = 0.6 x ADC
+
+	unsigned long fDLY[nMID][nCh];
+	for(int i=0; i<nMID; i++) fscanf(fp, "%lu %lu %lu %lu", fDLY[i]+0, fDLY[i]+1, fDLY[i]+2, fDLY[i]+3);
+	// ADC waveform delay from trigger point: 0 ~ 31992
+		// By default +80 will be added as intrinsic delay of device (e.g. 64 = 64 + 80)
+		// Give the number can be devided by 2 (e.g., 48 for ~50, 72 for ~75)
+
+	unsigned long fPOL[nMID][nCh];	  
+	for(int i=0; i<nMID; i++) fscanf(fp, "%lu %lu %lu %lu", fPOL[i]+0, fPOL[i]+1, fPOL[i]+2, fPOL[i]+3);
+    // Input pulse polarity: 0 = negative, 1 = positive
+
+	unsigned long fDACOFF[nMID][nCh]; 
+	for(int i=0; i<nMID; i++) fscanf(fp, "%lu %lu %lu %lu", fDACOFF[i]+0, fDACOFF[i]+1, fDACOFF[i]+2, fDACOFF[i]+3);
 
 	// When 1 enable local trigger as a self trigger
-	unsigned long fTrigOn_local = 1;
+	unsigned long fTrigOn_local = 0;
 	if (tTrigOn_self==false && fTrigOn_local==true)
 	{
 		cout <<"WARNING! self trigger (tcb) is OFF but local trigger (FADC) is ON\n";
@@ -63,8 +83,6 @@ int main(int argc, char** argv)
 
 	unsigned long fAMODE   = 1;   // ADC mode: 0 = raw, 1 = filtered
 	unsigned long fCW      = 32;  // Coincidence width: 8 ~ 32760
-	unsigned long fDACOFF  = 500; // ADC offset value: 0 ~ 4095
-	unsigned long fPOL     = 1;	  // Input pulse polarity: 0 = negative, 1 = positive
 	unsigned long fPCI     = 32;  // Pulse count interval: 32 ~ 8160 ns
 	unsigned long fPCT     = 1;	  // Pulse count threshold: 1 ~ 15
 	unsigned long fPWT     = 2; // Pulse width threshold: 2 ~ 1022 ns
@@ -72,72 +90,12 @@ int main(int argc, char** argv)
 	unsigned long fDT      = 20;  // Trigger deadtime: 0 ~ 8355840 ns
 	unsigned long fZEROSUP = 0;	  // Zero-suppression: 0 = not use, 1 = use (* ckim: NOT working)
 
-	// ADC waveform delay from trigger point: 0 ~ 31992
-	unsigned long fDLY[nMID][nCh] = //{{0.}};
-	{
-		// By default +80 will be added as intrinsic delay of device (e.g. 64 = 64 + 80)
-		// Give the number can be devided by 2 (e.g., 48 for ~50, 72 for ~75)
-		// mV = 0.6 x ADC
-		{100, 100, 100, 100}
-		//{150, 150, 150, 150}
-	};
-//	unsigned long fDLY[nMID][nCh] = //{{0.}};
-//	{
-//		// By default +80 will be added as intrinsic delay of device (e.g. 64 = 64 + 80)
-//		// Give the number can be devided by 2 (e.g., 48 for ~50, 72 for ~75)
-//		// mV = 0.6 x ADC
-//		{100, 100, 100, 100},
-//		{100, 100, 100, 100}
-//	};
-
-	// Discrimination threshold
-	// 1 ~ 4095 for pulse height threshold: 4,095 vs. 2 V (dynamic range) -> 100 ~ 50 mV 
-	// 1 ~ 67108863 for peak sum threshold
-	unsigned long fTHR[nMID][nCh] =
-	{
-		{15, 15, 50, 50}
-	};
-//	unsigned long fTHR[nMID][nCh] =
-//	{
-//		{30, 30, 50, 50},
-//		{100, 100, 100, 100}
-//	};
-
-	// Set trigger mode
+		// Set trigger mode
 	unsigned long fTM_PC   = 1; // When 1 enables pulse count trigger 
 	unsigned long fTM_PW   = 0; // When 1 enables pulse width trigger
 	unsigned long fTM_PS   = 0; // When 1 enables peak sum trigger
 	unsigned long fTM_PSOR = 0; // When 1 enables peak sum OR trigger
 	unsigned long fTM = (fTM_PSOR<<3) | (fTM_PS<<2) | (fTM_PW<<1) | fTM_PC;
-
-	//Read setup file, and get those variables
-	FILE* fp = fopen("setup_singlemodule.txt" ,"rt");
-	if ( fp == NULL ){
-		cout<<"Can not open setup file!"<<endl;
-	} else{
-
-		char TriggerC;
-		fscanf(fp, "%c", &TriggerC);
-		fscanf(fp, "%ld %ld %ld %ld", fTHR[0]+0, fTHR[0]+1, fTHR[0]+2, fTHR[0]+3);
-
-
-		switch (TriggerC){
-			case '&':
-				fTLT[0] = 0x8888;
-				break;
-			case '|':
-				fTLT[0] = 0xEEEE;
-				break;
-			case '1':
-				fTLT[0] = 0xAAAA;
-				break;
-			case '2':
-				fTLT[0] = 0xCCCC;
-				break;
-		}
-		cout << TriggerC << endl;
-
-	}
 
 	// Options parsing (written by JWLee @ KU)
 	// --------------------------------------------------
@@ -207,7 +165,8 @@ int main(int argc, char** argv)
 				break;
 
 			case 'o':
-				fDACOFF = std::atoi( optarg ); 
+                for (int i=0; i<nMID; i++)
+                for (int j=0; j<nCh;  j++) fDACOFF[i][j] = std::atoi( optarg ); 
 				break;
 
 			case 'd':
@@ -278,19 +237,19 @@ int main(int argc, char** argv)
 			tcb->MINITCB_V2measure_PED  (tcp_Handle, fMID, j+1);
 			tcb->MINITCB_V2write_AMODE  (tcp_Handle, fMID, j+1, fAMODE);
 			tcb->MINITCB_V2write_CW     (tcp_Handle, fMID, j+1, fCW);
-			tcb->MINITCB_V2write_DACOFF (tcp_Handle, fMID, j+1, fDACOFF);
+			tcb->MINITCB_V2write_DACOFF (tcp_Handle, fMID, j+1, fDACOFF[fMID-1][j]);
 			tcb->MINITCB_V2write_DLY    (tcp_Handle, fMID, j+1, fDLY[fMID-1][j]);
 			tcb->MINITCB_V2write_DT     (tcp_Handle, fMID, j+1, fDT);
 			tcb->MINITCB_V2write_PCI    (tcp_Handle, fMID, j+1, fPCI);
 			tcb->MINITCB_V2write_PCT    (tcp_Handle, fMID, j+1, fPCT);
-			tcb->MINITCB_V2write_POL    (tcp_Handle, fMID, j+1, fPOL);
+			tcb->MINITCB_V2write_POL    (tcp_Handle, fMID, j+1, fPOL[fMID-1][j]);
 			tcb->MINITCB_V2write_PSW    (tcp_Handle, fMID, j+1, fPSW);
 			tcb->MINITCB_V2write_PWT    (tcp_Handle, fMID, j+1, fPWT);
 			tcb->MINITCB_V2write_THR    (tcp_Handle, fMID, j+1, fTHR[fMID-1][j]);
 			tcb->MINITCB_V2write_TM     (tcp_Handle, fMID, j+1, fTM);
 			tcb->MINITCB_V2write_ZEROSUP(tcp_Handle, fMID, j+1, fZEROSUP);
 		}//j, FADC channels
-		tcb->MINITCB_V2write_POL(tcp_Handle, fMID, 5, fPOL);
+        //tcb->MINITCB_V2write_POL(tcp_Handle, fMID, 5, fPOL);
 
 		cout << "##################" << endl;
 		cout << "sampling width(tcb): " << tcb->MINITCB_V2read_DSR(tcp_Handle, fMID) << endl;
